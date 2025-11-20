@@ -1,102 +1,75 @@
-name: Deploy to GCP VM
+name: Deploy PHP App to Google Cloud VM
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      
-      - name: Setup SSH Key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H 136.116.111.59 >> ~/.ssh/known_hosts
-      
-      - name: Setup SSH Agent with Passphrase
-        env:
-          SSH_PASSPHRASE: ${{ secrets.SSH_PASSPHRASE }}
-        run: |
-          eval $(ssh-agent -s)
-          echo "$SSH_PASSPHRASE" | SSH_ASKPASS_REQUIRE=never ssh-add ~/.ssh/id_rsa || true
-          ssh -o StrictHostKeyChecking=no github-actions@136.116.111.59 "echo 'SSH connection successful'"
-      
-      - name: Deploy Application Files
-        env:
-          SSH_PASSPHRASE: ${{ secrets.SSH_PASSPHRASE }}
-          APP_PORT: ${{ secrets.APP_PORT }}
-        run: |
-          eval $(ssh-agent -s)
-          echo "$SSH_PASSPHRASE" | SSH_ASKPASS_REQUIRE=never ssh-add ~/.ssh/id_rsa || true
-          
-          ssh github-actions@136.116.111.59 "mkdir -p /tmp/lab5app"
-          scp -r index.php db.php migrations.php sql/ github-actions@136.116.111.59:/tmp/lab5app/
-          scp deploy_app.sh github-actions@136.116.111.59:/tmp/lab5app/
-          
-          ssh github-actions@136.116.111.59 << 'ENDSSH'
-            cd /tmp/lab5app
-            chmod +x deploy_app.sh
-            sudo ./deploy_app.sh lab5app ${APP_PORT:-8002}
-            sudo cp -r index.php db.php migrations.php sql /var/www/lab5app/
-            sudo chown -R www-data:www-data /var/www/lab5app
-            sudo chmod -R 755 /var/www/lab5app
-          ENDSSH
-      
-      - name: Run Database Migrations
-        env:
-          SSH_PASSPHRASE: ${{ secrets.SSH_PASSPHRASE }}
-          DB_HOST: ${{ secrets.DB_HOST }}
-          DB_NAME: ${{ secrets.DB_NAME }}
-          DB_USER: ${{ secrets.DB_USER }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-        run: |
-          eval $(ssh-agent -s)
-          echo "$SSH_PASSPHRASE" | SSH_ASKPASS_REQUIRE=never ssh-add ~/.ssh/id_rsa || true
-          
-          ssh github-actions@136.116.111.59 << ENDSSH
-            export DB_HOST="${DB_HOST}"
-            export DB_NAME="${DB_NAME}"
-            export DB_USER="${DB_USER}"
-            export DB_PASSWORD="${DB_PASSWORD}"
-            cd /var/www/lab5app
-            php migrations.php
-          ENDSSH
-      
-      - name: Test Deployment
-        env:
-          SSH_PASSPHRASE: ${{ secrets.SSH_PASSPHRASE }}
-          DB_HOST: ${{ secrets.DB_HOST }}
-          DB_NAME: ${{ secrets.DB_NAME }}
-          DB_USER: ${{ secrets.DB_USER }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-        run: |
-          eval $(ssh-agent -s)
-          echo "$SSH_PASSPHRASE" | SSH_ASKPASS_REQUIRE=never ssh-add ~/.ssh/id_rsa || true
-          
-          ssh github-actions@136.116.111.59 << ENDSSH
-            export DB_HOST="${DB_HOST}"
-            export DB_NAME="${DB_NAME}"
-            export DB_USER="${DB_USER}"
-            export DB_PASSWORD="${DB_PASSWORD}"
-            cd /var/www/lab5app
-            echo "Testing database connection..."
-            php db.php
-          ENDSSH
-      
-      - name: Deployment Summary
-        run: |
-          echo "========================================="
-          echo "✅ Deployment completed successfully!"
-          echo "========================================="
-          echo "Server: 136.116.111.59"
-          echo "Application: http://136.116.111.59:${{ secrets.APP_PORT }}"
-          echo "Directory: /var/www/lab5app"
-          echo "========================================="
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Write env file
+      run: |
+        echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
+        echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
+        echo "DB_USER=${{ secrets.DB_USER }}" >> .env
+        echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+    
+    - name: Copy artifact to VM
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.VM_HOST }}
+        username: ${{ secrets.VM_USER }}
+        key: ${{ secrets.VM_SSH_KEY }}
+        passphrase: ${{ secrets.VM_SSH_PASSPHRASE }}
+        source: ".env,*.php,sql/,deploy_app.sh"
+        target: "/tmp/lab5app"
+        strip_components: 0
+    
+    - name: Deploy to Apache
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.VM_HOST }}
+        username: ${{ secrets.VM_USER }}
+        key: ${{ secrets.VM_SSH_KEY }}
+        passphrase: ${{ secrets.VM_SSH_PASSPHRASE }}
+        script: |
+          cd /tmp/lab5app
+          chmod +x deploy_app.sh
+          sudo ./deploy_app.sh lab5app ${{ secrets.APP_PORT }}
+          sudo cp -r .env *.php sql /var/www/lab5app/
+          sudo chown -R www-data:www-data /var/www/lab5app
+          sudo chmod -R 755 /var/www/lab5app
+          echo "Listen ${{ secrets.APP_PORT }}" | sudo tee -a /etc/apache2/ports.conf || true
+          sudo systemctl reload apache2
+          echo "Deployment completed!"
+    
+    - name: Run database migrations
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.VM_HOST }}
+        username: ${{ secrets.VM_USER }}
+        key: ${{ secrets.VM_SSH_KEY }}
+        passphrase: ${{ secrets.VM_SSH_PASSPHRASE }}
+        script: |
+          cd /var/www/lab5app
+          export $(cat .env | xargs)
+          php migrations.php
+          echo "Migrations completed!"
+    
+    - name: Test deployment
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.VM_HOST }}
+        username: ${{ secrets.VM_USER }}
+        key: ${{ secrets.VM_SSH_KEY }}
+        passphrase: ${{ secrets.VM_SSH_PASSPHRASE }}
+        script: |
+          cd /var/www/lab5app
+          export $(cat .env | xargs)
+          php db.php

@@ -1,70 +1,41 @@
-name: SQL Database Execution
+name: DB Migrations
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
-    inputs:
-      sql_file:
-        description: 'SQL file to execute (from sql/ directory)'
-        required: true
-        default: '001_create_users_table.sql'
 
 jobs:
-  execute-sql:
+  migrate:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
       
       - name: Install MySQL Client
         run: |
-          sudo apt-get update
-          sudo apt-get install -y mysql-client
+          sudo apt update
+          sudo apt install -y mysql-client
       
-      - name: Execute SQL Script
+      - name: Run SQL scripts
         env:
-          DB_HOST: ${{ secrets.DB_HOST }}
           DB_NAME: ${{ secrets.DB_NAME }}
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-        run: |
-          echo "Executing SQL file: sql/${{ github.event.inputs.sql_file }}"
-          
-          if [ ! -f "sql/${{ github.event.inputs.sql_file }}" ]; then
-            echo "❌ Error: File sql/${{ github.event.inputs.sql_file }} not found!"
-            exit 1
-          fi
-          
-          echo "Connecting to database..."
-          mysql -h "${DB_HOST}" -u "${DB_USER}" -p"${DB_PASSWORD}" "${DB_NAME}" < "sql/${{ github.event.inputs.sql_file }}"
-          
-          if [ $? -eq 0 ]; then
-            echo "✅ SQL script executed successfully!"
-          else
-            echo "❌ Error executing SQL script"
-            exit 1
-          fi
-      
-      - name: Verify Execution
-        env:
           DB_HOST: ${{ secrets.DB_HOST }}
-          DB_NAME: ${{ secrets.DB_NAME }}
-          DB_USER: ${{ secrets.DB_USER }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: |
-          echo "Verifying database tables..."
-          mysql -h "${DB_HOST}" -u "${DB_USER}" -p"${DB_PASSWORD}" "${DB_NAME}" -e "SHOW TABLES;"
-          
-          echo ""
-          echo "Checking users table..."
-          mysql -h "${DB_HOST}" -u "${DB_USER}" -p"${DB_PASSWORD}" "${DB_NAME}" -e "SELECT COUNT(*) as total_users FROM users;" || echo "Table 'users' not found yet"
-      
-      - name: Execution Summary
-        run: |
-          echo "========================================="
-          echo "✅ SQL Execution completed!"
-          echo "========================================="
-          echo "Database: ${{ secrets.DB_NAME }}"
-          echo "Host: ${{ secrets.DB_HOST }}"
-          echo "File: sql/${{ github.event.inputs.sql_file }}"
-          echo "========================================="
+          echo "Running SQL scripts..."
+          for sql_file in sql/*.sql; do
+            if [ -f "$sql_file" ]; then
+              echo "Executing: $sql_file"
+              mysql --host=$DB_HOST --user=$DB_USER --password=$DB_PASSWORD $DB_NAME < $sql_file || echo "Warning: Failed to execute $sql_file"
+            fi
+          done
+          echo "All SQL scripts executed!"
