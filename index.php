@@ -6,19 +6,49 @@ define('APP_VERSION', '1.0.0');
 // Database connection
 try {
     $host = getenv('DB_HOST') ?: '136.114.93.122';
-    $db   = getenv('DB_NAME') ?: 'your_db_name';
+    $db   = getenv('DB_NAME') ?: '89413';
     $user = getenv('DB_USER') ?: 'stud';
     $pass = getenv('DB_PASSWORD') ?: 'Uwb123!!';
     
-    $pdo = new PDO("mysql:host=$host;dbname=$db;charset=utf8mb4", $user, $pass, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-    ]);
+    // Try different possible database name formats
+    $possible_db_names = [
+        $db,                    // 89413
+        's' . $db,             // s89413
+        'student_' . $db,      // student_89413
+        'db_' . $db,           // db_89413
+    ];
     
-    $db_status = '<span style="color: green;">✓ Connected</span>';
+    $pdo = null;
+    $last_error = '';
     
-    // Fetch users from database
-    $stmt = $pdo->query("SELECT id, name, email, created_at FROM users ORDER BY created_at DESC LIMIT 10");
-    $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($possible_db_names as $try_db) {
+        try {
+            $pdo = new PDO("mysql:host=$host;dbname=$try_db;charset=utf8mb4", $user, $pass, [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            ]);
+            $db = $try_db; // Save successful database name
+            break;
+        } catch (PDOException $e) {
+            $last_error = $e->getMessage();
+            continue;
+        }
+    }
+    
+    if (!$pdo) {
+        throw new PDOException($last_error);
+    }
+    
+    $db_status = '<span style="color: green;">✓ Connected to database: ' . htmlspecialchars($db) . '</span>';
+    
+    // Fetch users from database (create table if not exists)
+    try {
+        $stmt = $pdo->query("SELECT id, name, email, created_at FROM users ORDER BY created_at DESC LIMIT 10");
+        $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        // Table might not exist yet
+        $users = [];
+        $db_status .= '<br><span style="color: orange;">⚠ Table "users" not found. Run migrations.php to create tables.</span>';
+    }
     
 } catch (PDOException $e) {
     $db_status = '<span style="color: red;">✗ Error: ' . htmlspecialchars($e->getMessage()) . '</span>';

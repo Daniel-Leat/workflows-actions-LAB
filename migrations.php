@@ -1,16 +1,47 @@
 <?php
 // Database migrations script
 $host = getenv('DB_HOST') ?: '136.114.93.122';
-$db   = getenv('DB_NAME') ?: 'your_db_name';
+$db   = getenv('DB_NAME') ?: '89413';
 $user = getenv('DB_USER') ?: 'stud';
 $pass = getenv('DB_PASSWORD') ?: 'Uwb123!!';
 
+echo "Starting database migrations...\n";
+echo "Host: $host\n";
+echo "User: $user\n\n";
+
+// Try different possible database name formats
+$possible_db_names = [
+    $db,                    // 89413
+    's' . $db,             // s89413
+    'student_' . $db,      // student_89413
+    'db_' . $db,           // db_89413
+];
+
+$pdo = null;
+foreach ($possible_db_names as $try_db) {
+    try {
+        echo "Trying to connect to database: $try_db ... ";
+        $pdo = new PDO("mysql:host=$host;dbname=$try_db;charset=utf8mb4", $user, $pass, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        ]);
+        echo "✓ Connected!\n";
+        $db = $try_db;
+        break;
+    } catch (PDOException $e) {
+        echo "✗ Failed\n";
+        continue;
+    }
+}
+
+if (!$pdo) {
+    echo "\n❌ Could not connect to any database!\n";
+    echo "Tried: " . implode(', ', $possible_db_names) . "\n";
+    echo "Error: Database might not exist or credentials are incorrect.\n";
+    exit(1);
+}
+
 try {
-    $pdo = new PDO("mysql:host=$host;dbname=$db;charset=utf8mb4", $user, $pass, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-    ]);
-    
-    echo "Connected to database successfully.\n";
+    echo "\nConnected to database: $db\n";
     
     // Create migrations table if not exists
     $pdo->exec("
