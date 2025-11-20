@@ -52,6 +52,13 @@ try {
     
 } catch (PDOException $e) {
     $db_status = '<span style="color: red;">✗ Error: ' . htmlspecialchars($e->getMessage()) . '</span>';
+    $db_status .= '<br><br><strong>Troubleshooting:</strong><ul>';
+    $db_status .= '<li>Tried databases: ' . implode(', ', $possible_db_names) . '</li>';
+    $db_status .= '<li>Contact your database administrator to:</li>';
+    $db_status .= '<li>1. Verify database name (your student number: 89413)</li>';
+    $db_status .= '<li>2. Grant access from IP: ' . ($_SERVER['SERVER_ADDR'] ?? 'N/A') . '</li>';
+    $db_status .= '<li>3. Run: <code>GRANT ALL PRIVILEGES ON [db_name].* TO \'stud\'@\'136.116.111.59\';</code></li>';
+    $db_status .= '</ul>';
     $users = [];
 }
 
