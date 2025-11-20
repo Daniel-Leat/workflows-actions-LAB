@@ -42,7 +42,7 @@ try {
     
     // Fetch users from database (create table if not exists)
     try {
-        $stmt = $pdo->query("SELECT id, name, email, created_at FROM users ORDER BY created_at DESC LIMIT 10");
+        $stmt = $pdo->query("SELECT id, username, email, description, created_at FROM users ORDER BY created_at DESC LIMIT 10");
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
         // Table might not exist yet
@@ -187,8 +187,9 @@ $env_vars = [
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Imię</th>
+                    <th>Username</th>
                     <th>Email</th>
+                    <th>Description</th>
                     <th>Data dodania</th>
                 </tr>
             </thead>
@@ -196,8 +197,9 @@ $env_vars = [
                 <?php foreach ($users as $user): ?>
                 <tr>
                     <td><?php echo htmlspecialchars($user['id']); ?></td>
-                    <td><?php echo htmlspecialchars($user['name']); ?></td>
+                    <td><?php echo htmlspecialchars($user['username']); ?></td>
                     <td><?php echo htmlspecialchars($user['email']); ?></td>
+                    <td><?php echo htmlspecialchars($user['description'] ?? '-'); ?></td>
                     <td><?php echo htmlspecialchars($user['created_at']); ?></td>
                 </tr>
                 <?php endforeach; ?>

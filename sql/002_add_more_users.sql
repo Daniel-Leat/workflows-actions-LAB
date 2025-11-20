@@ -2,18 +2,14 @@
 -- This migration can be added later for testing purposes
 
 -- Add more users
-INSERT INTO users (name, email) VALUES
-    ('Katarzyna Lewandowska', 'katarzyna.lewandowska@example.com'),
-    ('Michał Zieliński', 'michal.zielinski@example.com'),
-    ('Magdalena Szymańska', 'magdalena.szymanska@example.com'),
-    ('Paweł Dąbrowski', 'pawel.dabrowski@example.com'),
-    ('Agnieszka Kozłowska', 'agnieszka.kozlowska@example.com'),
-    ('Krzysztof Jankowski', 'krzysztof.jankowski@example.com'),
-    ('Joanna Mazur', 'joanna.mazur@example.com'),
-    ('Marcin Krawczyk', 'marcin.krawczyk@example.com'),
-    ('Ewa Piotrowska', 'ewa.piotrowska@example.com'),
-    ('Adam Grabowski', 'adam.grabowski@example.com')
-ON DUPLICATE KEY UPDATE name=name;
-
--- Update statistics (optional)
--- You can add more complex data manipulation here
+INSERT INTO users (username, email, description) VALUES
+    ('katarzyna_lewandowska', 'katarzyna.lewandowska@example.com', 'Team Leader'),
+    ('michal_zielinski', 'michal.zielinski@example.com', 'QA Engineer'),
+    ('magdalena_szymanska', 'magdalena.szymanska@example.com', 'Database Administrator'),
+    ('pawel_dabrowski', 'pawel.dabrowski@example.com', 'Project Manager'),
+    ('agnieszka_kozlowska', 'agnieszka.kozlowska@example.com', 'Security Specialist'),
+    ('krzysztof_jankowski', 'krzysztof.jankowski@example.com', 'Business Analyst'),
+    ('joanna_mazur', 'joanna.mazur@example.com', 'Mobile Developer'),
+    ('marcin_krawczyk', 'marcin.krawczyk@example.com', 'Content Manager'),
+    ('ewa_piotrowska', 'ewa.piotrowska@example.com', 'System Architect'),
+    ('adam_grabowski', 'adam.grabowski@example.com', 'Technical Writer');

@@ -1,19 +1,16 @@
 -- Create users table
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    email VARCHAR(150) NOT NULL UNIQUE,
+    username VARCHAR(50) NOT NULL,
+    email VARCHAR(100) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_email (email),
-    INDEX idx_created_at (created_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    description VARCHAR(100)
+);
 
 -- Insert sample data
-INSERT INTO users (name, email) VALUES
-    ('Jan Kowalski', 'jan.kowalski@example.com'),
-    ('Anna Nowak', 'anna.nowak@example.com'),
-    ('Piotr Wiśniewski', 'piotr.wisniewski@example.com'),
-    ('Maria Wójcik', 'maria.wojcik@example.com'),
-    ('Tomasz Kamiński', 'tomasz.kaminski@example.com')
-ON DUPLICATE KEY UPDATE name=name;
+INSERT INTO users (username, email, description) VALUES
+    ('jan_kowalski', 'jan.kowalski@example.com', 'Administrator systemu'),
+    ('anna_nowak', 'anna.nowak@example.com', 'Programista backend'),
+    ('piotr_wisniewski', 'piotr.wisniewski@example.com', 'Frontend developer'),
+    ('maria_wojcik', 'maria.wojcik@example.com', 'UX Designer'),
+    ('tomasz_kaminski', 'tomasz.kaminski@example.com', 'DevOps Engineer');
