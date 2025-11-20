@@ -36,12 +36,12 @@ github
 
 ### 3. APP_PORT
 
-**Wartość:** (wybierz wolny port z listy - polecam 8002)
+**Wartość:** (Twój przypisany port według listy: 89413 → 8007)
 ```
-8002
+8007
 ```
 
-> 📝 **Uwaga:** Możesz wybrać inny port z listy: 8002, 8003, 8004, 8005, 8006, 8007, 8008, 8009, 8010, 8011, 8012
+> ✅ **Port 8007 jest przypisany do Twojego numeru albumu (89413)**
 
 ---
 
@@ -56,12 +56,12 @@ github
 
 ### 5. DB_NAME
 
-**Wartość:** (WPISZ SWÓJ NUMER ALBUMU!)
+**Wartość:**
 ```
-89419
+89413
 ```
 
-> ⚠️ **ZMIEŃ TO NA SWÓJ NUMER ALBUMU!** Według listy portów, może to być jeden z numerów: 89419, 89402, 89428, 89412, 88360, 89413, 88327, 89404, 89403, 89411, 89417
+> ✅ **To jest Twój numer albumu**
 
 ---
 
@@ -114,10 +114,8 @@ Sprawdź postęp: https://github.com/Daniel-Leat/workflows-actions-LAB/actions
 ### Krok 3: Otwórz aplikację w przeglądarce
 
 ```
-http://136.116.111.59:8002
+http://136.116.111.59:8007
 ```
-
-(lub inny port jeśli wybrałeś inny niż 8002)
 
 ---
 
@@ -137,7 +135,7 @@ cd workflows-actions-LAB
 
 # Wdróż
 chmod +x deploy_app.sh
-sudo ./deploy_app.sh lab5app 8002
+sudo ./deploy_app.sh lab5app 8007
 
 # Skopiuj pliki
 sudo cp -r index.php db.php migrations.php sql /var/www/lab5app/
@@ -145,7 +143,7 @@ sudo chown -R www-data:www-data /var/www/lab5app
 
 # Uruchom migracje
 export DB_HOST="136.114.93.122"
-export DB_NAME="89419"  # TWÓJ NUMER ALBUMU
+export DB_NAME="89413"
 export DB_USER="stud"
 export DB_PASSWORD="Uwb123!!"
 cd /var/www/lab5app
@@ -162,12 +160,12 @@ php db.php
 ### Dane serwera:
 - **IP:** 136.116.111.59
 - **Użytkownik:** github-actions
-- **Port aplikacji:** 8002 (lub inny wybrany)
+- **Port aplikacji:** 8007
 - **Ścieżka:** /var/www/lab5app
 
 ### Baza danych:
 - **Host:** 136.114.93.122
-- **Nazwa:** Twój numer albumu
+- **Nazwa:** 89413
 - **User:** stud
 - **Hasło:** Uwb123!!
 
@@ -179,7 +177,7 @@ php db.php
 
 ### URL aplikacji:
 ```
-http://136.116.111.59:8002
+http://136.116.111.59:8007
 ```
 
 ---
