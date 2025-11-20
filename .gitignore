@@ -1,0 +1,48 @@
+# Ignore IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Ignore environment files
+.env
+.env.local
+.env.*.local
+
+# Ignore SSH keys (important!)
+*.pem
+*.key
+*_key
+id_rsa*
+gcp_vm_key
+*.json
+
+# Ignore logs
+*.log
+logs/
+*.tmp
+
+# Ignore vendor directories (if using Composer)
+vendor/
+composer.lock
+
+# Ignore backup files
+*.bak
+*.backup
+*~
+
+# Ignore uploads/cache directories
+uploads/
+cache/
+tmp/
+
+# Ignore database dumps
+*.sql.gz
+*.sql.zip
+dump.sql
