@@ -1,4 +1,4 @@
-name: Deploy PHP App to VM
+name: Deploy to GCP VM
 
 on:
   push:
@@ -19,70 +19,84 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.VM_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H 136.116.111.59 >> ~/.ssh/known_hosts
       
-      - name: Test SSH Connection
+      - name: Setup SSH Agent with Passphrase
+        env:
+          SSH_PASSPHRASE: ${{ secrets.SSH_PASSPHRASE }}
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} "echo 'SSH connection successful'"
+          eval $(ssh-agent -s)
+          echo "$SSH_PASSPHRASE" | SSH_ASKPASS_REQUIRE=never ssh-add ~/.ssh/id_rsa || true
+          ssh -o StrictHostKeyChecking=no github-actions@136.116.111.59 "echo 'SSH connection successful'"
       
       - name: Deploy Application Files
+        env:
+          SSH_PASSPHRASE: ${{ secrets.SSH_PASSPHRASE }}
+          APP_PORT: ${{ secrets.APP_PORT }}
         run: |
-          ssh ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} "sudo mkdir -p /var/www/${{ secrets.APP_NAME }}"
-          scp -r index.php db.php migrations.php sql/ ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }}:/tmp/
-          ssh ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} "sudo mv /tmp/index.php /tmp/db.php /tmp/migrations.php /var/www/${{ secrets.APP_NAME }}/"
-          ssh ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} "sudo mv /tmp/sql /var/www/${{ secrets.APP_NAME }}/"
-      
-      - name: Deploy Deployment Script
-        run: |
-          scp deploy_app.sh ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }}:/tmp/
-          ssh ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} "chmod +x /tmp/deploy_app.sh"
-      
-      - name: Run Deployment Script
-        run: |
-          ssh ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} "sudo /tmp/deploy_app.sh ${{ secrets.APP_NAME }} 80"
-      
-      - name: Set Environment Variables
-        run: |
-          ssh ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} << 'EOF'
-            sudo bash -c 'cat > /var/www/${{ secrets.APP_NAME }}/.env' << ENVEOF
-          export DB_HOST="${{ secrets.DB_HOST }}"
-          export DB_NAME="${{ secrets.DB_NAME }}"
-          export DB_USER="${{ secrets.DB_USER }}"
-          export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
-          ENVEOF
-          EOF
-      
-      - name: Set Proper Permissions
-        run: |
-          ssh ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} "sudo chown -R www-data:www-data /var/www/${{ secrets.APP_NAME }}"
-          ssh ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} "sudo chmod -R 755 /var/www/${{ secrets.APP_NAME }}"
+          eval $(ssh-agent -s)
+          echo "$SSH_PASSPHRASE" | SSH_ASKPASS_REQUIRE=never ssh-add ~/.ssh/id_rsa || true
+          
+          ssh github-actions@136.116.111.59 "mkdir -p /tmp/lab5app"
+          scp -r index.php db.php migrations.php sql/ github-actions@136.116.111.59:/tmp/lab5app/
+          scp deploy_app.sh github-actions@136.116.111.59:/tmp/lab5app/
+          
+          ssh github-actions@136.116.111.59 << 'ENDSSH'
+            cd /tmp/lab5app
+            chmod +x deploy_app.sh
+            sudo ./deploy_app.sh lab5app ${APP_PORT:-8002}
+            sudo cp -r index.php db.php migrations.php sql /var/www/lab5app/
+            sudo chown -R www-data:www-data /var/www/lab5app
+            sudo chmod -R 755 /var/www/lab5app
+          ENDSSH
       
       - name: Run Database Migrations
+        env:
+          SSH_PASSPHRASE: ${{ secrets.SSH_PASSPHRASE }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: |
-          ssh ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} << 'EOF'
-            export DB_HOST="${{ secrets.DB_HOST }}"
-            export DB_NAME="${{ secrets.DB_NAME }}"
-            export DB_USER="${{ secrets.DB_USER }}"
-            export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
-            cd /var/www/${{ secrets.APP_NAME }}
+          eval $(ssh-agent -s)
+          echo "$SSH_PASSPHRASE" | SSH_ASKPASS_REQUIRE=never ssh-add ~/.ssh/id_rsa || true
+          
+          ssh github-actions@136.116.111.59 << ENDSSH
+            export DB_HOST="${DB_HOST}"
+            export DB_NAME="${DB_NAME}"
+            export DB_USER="${DB_USER}"
+            export DB_PASSWORD="${DB_PASSWORD}"
+            cd /var/www/lab5app
             php migrations.php
-          EOF
+          ENDSSH
       
       - name: Test Deployment
+        env:
+          SSH_PASSPHRASE: ${{ secrets.SSH_PASSPHRASE }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: |
-          ssh ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} << 'EOF'
-            export DB_HOST="${{ secrets.DB_HOST }}"
-            export DB_NAME="${{ secrets.DB_NAME }}"
-            export DB_USER="${{ secrets.DB_USER }}"
-            export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
-            cd /var/www/${{ secrets.APP_NAME }}
+          eval $(ssh-agent -s)
+          echo "$SSH_PASSPHRASE" | SSH_ASKPASS_REQUIRE=never ssh-add ~/.ssh/id_rsa || true
+          
+          ssh github-actions@136.116.111.59 << ENDSSH
+            export DB_HOST="${DB_HOST}"
+            export DB_NAME="${DB_NAME}"
+            export DB_USER="${DB_USER}"
+            export DB_PASSWORD="${DB_PASSWORD}"
+            cd /var/www/lab5app
+            echo "Testing database connection..."
             php db.php
-          EOF
+          ENDSSH
       
       - name: Deployment Summary
         run: |
           echo "========================================="
-          echo "Deployment completed successfully!"
-          echo "Application deployed to: ${{ secrets.VM_HOST }}"
-          echo "Application name: ${{ secrets.APP_NAME }}"
+          echo "✅ Deployment completed successfully!"
+          echo "========================================="
+          echo "Server: 136.116.111.59"
+          echo "Application: http://136.116.111.59:${{ secrets.APP_PORT }}"
+          echo "Directory: /var/www/lab5app"
           echo "========================================="
